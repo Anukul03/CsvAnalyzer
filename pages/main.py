@@ -5,6 +5,10 @@ from analyze import analysis
 from viz import visuals
 from custom_viz import custom_visuals
 
+
+st.set_page_config(page_title=None, page_icon="images/favicon.png", layout="wide", initial_sidebar_state="auto")
+
+st.title("CSV Data Analyser")
 sidebar = st.sidebar
 sidebar.title("File Uploader")
 uploaded_file = sidebar.file_uploader("Upload a CSV file", type=["csv"], key="123")

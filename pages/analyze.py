@@ -31,6 +31,6 @@ def analysis(df):
     # Display the combined DataFrame
     st.dataframe(
         combined_df,hide_index=True,
-        height=int(35.5 * (combined_df.shape[0] + 1)),use_container_width=True
+        height=int(35.2 * (combined_df.shape[0] + 1)),use_container_width=True
     )
 
