@@ -127,8 +127,16 @@ def visuals(df):
             st.plotly_chart(fig, use_container_width=True)
     
     st.subheader("Correlation Heatmap")
-    fig = px.imshow(df[numerical_columns].corr(), text_auto=True, color_continuous_scale='RdBu', title="Correlation Heatmap")
+    fig = px.imshow(
+        df[numerical_columns].corr(), 
+        text_auto=True, 
+        color_continuous_scale='RdBu', 
+        title="Correlation Heatmap",
+        height=2000,  # Increase height
+        width=2000   # Increase width
+    )
     st.plotly_chart(fig, use_container_width=True)
+
     
 ######################## Custom Visualizer ##############################
 def custom_visuals(df):
