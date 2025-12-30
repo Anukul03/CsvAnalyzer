@@ -140,69 +140,97 @@ def visuals(df):
     
 ######################## Custom Visualizer ##############################
 def custom_visuals(df):
-    st.subheader("Create Your Custom Visualization")
+    st.subheader("Create Your Custom Catplot Visualization")
     
-    # Column selection
-    chart_type = st.selectbox("Select Chart Type", ["Bar Chart", "Box Plot", "Violin Plot", "Scatter Plot", "Histogram", "Line Plot", "Pair Plot", "Heatmap"])
+    numerical_columns = df.columns.tolist()
+    categorical_columns = df.columns.tolist()
+    
     col1, col2 = st.columns(2)
     with col1:
-        x_column = st.selectbox("Select X-axis Column", df.columns)
+        kind = st.selectbox(
+            "Catplot Kind",
+            ["strip", "swarm", "box", "violin", "boxen", "point", "bar", "count"]
+        )
+        
+        x = st.selectbox("X-axis", categorical_columns + numerical_columns)
+        height = st.slider("Height", 2, 10, 5)
+        hue = st.selectbox("Hue (optional)", [None] + categorical_columns)
+        row = st.selectbox("Row Facet", [None] + categorical_columns)
+        legend = st.selectbox("Legend", ["auto", "brief", "full", False])
+        legend_out = st.checkbox("Legend Outside", True)
+
     with col2:
-        y_column = st.selectbox("Select Y-axis Column (if applicable)", [None] + df.columns.tolist())
-    
-    # Additional customization options
-    categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
-    numerical_columns = df.select_dtypes(include=['number']).columns.tolist()
-    hue_column = st.selectbox("Select Hue (Grouping) Column", [None] + categorical_columns)
-    
-    # Chart rendering
-    fig = None
-    if chart_type == "Bar Chart" and y_column:
-        fig = px.bar(df, x=x_column, y=y_column, color=hue_column, title=f"Bar Chart: {x_column} vs {y_column}")
-    elif chart_type == "Box Plot" and y_column:
-        fig = px.box(df, x=x_column, y=y_column, color=hue_column, title=f"Box Plot: {x_column} vs {y_column}")
-    elif chart_type == "Violin Plot" and y_column:
-        fig = px.violin(df, x=x_column, y=y_column, color=hue_column, title=f"Violin Plot: {x_column} vs {y_column}")
-    elif chart_type == "Scatter Plot" and y_column:
-        fig = px.scatter(df, x=x_column, y=y_column, color=hue_column, title=f"Scatter Plot: {x_column} vs {y_column}")
-    elif chart_type == "Histogram":
-        fig = px.histogram(df, x=x_column, color=hue_column, nbins=30, title=f"Histogram of {x_column}")
-    elif chart_type == "Line Plot" and y_column:
-        fig = px.line(df, x=x_column, y=y_column, color=hue_column, title=f"Line Plot: {x_column} over {y_column}")
-    elif chart_type == "Pair Plot" and len(numerical_columns) > 1:
-        fig = sns.pairplot(df[numerical_columns], hue=hue_column)
+        aggfunc = st.selectbox("Aggregation", ["mean", "median", "sum", "min", "max",  None])
+        y = st.selectbox("Y-axis", [None] + numerical_columns)
+        aspect = st.slider("Aspect Ratio", 0.5, 3.0, 1.0)
+        palette = None
+        if hue:
+            palette = st.selectbox(
+                "Palette",
+                ["deep", "muted", "pastel", "bright", "dark", "colorblind"]
+            )
+        col = st.selectbox("Column Facet", [None] + categorical_columns)
+        orient = st.selectbox("Orientation", ["v", "h", "x", "y", None])
+        margin_titles = st.checkbox("Margin Titles", False)
+        
+
+    estimator_map = {
+        "mean": "mean",
+        "median": "median",
+        "sum": sum,
+        "min": min,
+        "max": max,
+        # "count":"count",
+        # "distinct count": "nunique"
+    }
+
+    catplot_args = {
+        "data": df,
+        "kind": kind,
+        "x": x,
+        "y": y,
+        "hue": hue,
+        "row": row,
+        "col": col,
+        "height": height,
+        "aspect": aspect,
+        "orient": orient,
+        "legend": legend,
+        "legend_out": legend_out,
+        "margin_titles": margin_titles
+    }
+
+    if kind in ["bar", "point"] and aggfunc:
+        catplot_args["estimator"] = estimator_map[aggfunc]
+
+    if hue and palette:
+        catplot_args["palette"] = palette
+
+    catplot_args = {k: v for k, v in catplot_args.items() if v is not None}
+
+    if st.button("Submit"):
+        fig = sns.catplot(**catplot_args).tight_layout()
         st.pyplot(fig)
-    elif chart_type == "Heatmap" and len(numerical_columns) > 1:
-        fig = px.imshow(df[numerical_columns].corr(), text_auto=True, color_continuous_scale='RdBu', title="Correlation Heatmap")
-    
-    if fig:
-        st.plotly_chart(fig, use_container_width=True)
 
 ############################# Clean & Save ##################################
 
-# Function to clean categorical columns
 def clean_categorical(df):
-    # Fill missing values in categorical columns with 'Unknown'
     cat_columns = df.select_dtypes(include=['object']).columns
     for col in cat_columns:
-        df[col] = df[col].fillna('Unknown')  # Replace NaN with 'Unknown'
-        df[col] = df[col].str.lower().str.strip()  # Standardize text (lowercase and remove spaces)
+        df[col] = df[col].fillna('Unknown')  
+        df[col] = df[col].str.lower().str.strip()  
     
-    # Encode categorical columns using LabelEncoder
     le = LabelEncoder()
     for col in cat_columns:
-        df[col] = le.fit_transform(df[col])  # Convert categorical to numerical labels
+        df[col] = le.fit_transform(df[col])  
     return df
 
-# Function to clean numerical columns
 def clean_numerical(df):
-    # Handle missing values in numerical columns by replacing them with the median
     num_columns = df.select_dtypes(include=[np.number]).columns
     for col in num_columns:
         imputer = SimpleImputer(strategy='median')
-        df[col] = imputer.fit_transform(df[[col]])  # Fill missing values with the median
+        df[col] = imputer.fit_transform(df[[col]])  
     
-    # Detect and remove outliers using IQR method
     for col in num_columns:
         Q1 = df[col].quantile(0.25)
         Q3 = df[col].quantile(0.75)
